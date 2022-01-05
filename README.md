@@ -1,6 +1,6 @@
 # R Code for the creation of the insect bite force database
 
-This script was used to create the tables and figures of the article describing the insect bite force database published under
+This repository contains the R project that was used to create the tables and figures of the article describing the insect bite force database published under
 
 Rühr et al. (**in review**): A bite force database of 654 insect species.
 
