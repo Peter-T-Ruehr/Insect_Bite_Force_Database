@@ -8,7 +8,10 @@ Rühr et al. (**in review**): A bite force database of 654 insect species.
 ## Instructions
 1. Open the R project 'Bite_Force_Database.Rproj'
 2. Open the R script 'Bite_Force_Database.R'
+3. Run the script
 
-The Zenodo folder that is automatically downloaded (doi: 10.5281/zenodo.5782923) by this script already  contains all results of this script. Note that these files will be overwritten when this script is executed again.
+The script contains comments that explain the code step-by-step.
+
+The Zenodo folder that is automatically downloaded (doi: 10.5281/zenodo.5782923) by this script already contains all results of this script. Note that these files will be overwritten when this script is executed again.
 
 We provided example code for those steps that have been performed once and need manual input from the user. Such code is commented out, because it may change the underlying data of this database.
