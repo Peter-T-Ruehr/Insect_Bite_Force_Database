@@ -82,7 +82,7 @@ iBite.table <- read_excel("./iBite_table.xlsx") %>%
   select("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species", 
          "iBite", "ID", "specimen", "amp", 
          "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l", 
-         "latitude", "longitude")
+         "latitude", "longitude", "country")
 
 # define ranks for taxonomy
 all.ranks <- c("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species") # , "subtribe"
@@ -94,11 +94,12 @@ orders <- c("Odonata", "Dermaptera", "Orthoptera", "Mantophasmatodea", "Embiopte
 HemiHolo.order.fit <- tibble(order = orders)
 HemiHolo.order.fit$HemiHolo <- c(rep("Hemimetabola", 8), rep("Holometabola", 5))
 
+# add HemiHolo to tibble and rearrange columns and rows
 iBite.table <- left_join(iBite.table, HemiHolo.order.fit, by = "order") %>% 
-  select("HemiHolo", all.ranks, 
+  select("HemiHolo", "infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species", 
          "iBite", "ID", "specimen", "amp", 
          "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l", 
-         "latitude", "longitude") %>% 
+         "latitude", "longitude", "country") %>% 
   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species)
 
 # get order, family, species, specimen and measurement (=iBite) numbers
@@ -354,7 +355,7 @@ iBite.table.reduced_iBite <- iBite.measurements.long  %>%
          mean.ID.body.l.geom = mean_geometric_10(body.l)) %>% 
   ungroup() %>% 
   select(-c(t,y,force)) %>% 
-  left_join(select(iBite.table, c("iBite", all.ranks, amp, latitude, longitude)),
+  left_join(select(iBite.table, c("iBite", HemiHolo, all.ranks, amp, latitude, longitude, country)),
             by = "iBite")
 
 # reduce tibble to one observation per specimen
@@ -379,9 +380,9 @@ external.bf.data.meas <- read_xlsx("./ext_data/external_data.xlsx") %>%
 # scatter plots with regressions: the plots that are commented out are not used in the paper
 
 # body length; normal mean <- in supplement
-lin.eq.1 <- lm(x=log10(iBite.table.reduced_ID$mean.ID.body.l),
-               y = log10(iBite.table.reduced_ID$mean.bf.ID))
+lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID) ~ log10(iBite.table.reduced_ID$mean.ID.body.l))
 summary(lin.eq.1)
+
 iBite.table.reduced_plot <- iBite.table.reduced_ID %>% # renaming so it fits ggplot but names are not accurate
   select(-c(mean.bf.specimen, body.l)) %>%
   rename(mean.bf.specimen = mean.bf.ID, body.l = mean.ID.body.l)
@@ -393,40 +394,37 @@ p1 <- ggplot(data = iBite.table.reduced_specimen, aes(x = body.l,
   scale_x_log10() +
   scale_y_log10() +
   labs(y = bquote("bite force [N]"), x = bquote("body length [mm]")) +
-  # geom_text(x = 1, y = 1.0, label = lin.eq.1, parse = TRUE)+
   theme_bw()
 # p1
 p1.body.l.hist.regular <- ggExtra::ggMarginal(p1, type = "histogram")
-
+# p1.body.l.hist.regular
 
 # body length; geometric mean <- in Fig. 2 in main text
-lin.eq.1 <- lm_eqn(x=log10(iBite.table.reduced_ID$mean.ID.body.l.geom), 
-                   y = log10(iBite.table.reduced_ID$mean.bf.ID.geom))
-lin.eq.1
+lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID.geom) ~ log10(iBite.table.reduced_ID$mean.ID.body.l.geom))
+summary(lin.eq.1)
 
 iBite.table.reduced_plot <- iBite.table.reduced_ID %>% # renaming so it fits ggplot but names are not accurate
   select(-c(mean.bf.specimen, max.bf.specimen, body.l)) %>% 
   rename(max.bf.specimen = mean.bf.ID.geom, body.l = mean.ID.body.l.geom)
+
 p1.body.l <- ggplot(data = iBite.table.reduced_specimen, aes(x = body.l,
                                                              y = max.bf.specimen)) +
   geom_point(cex = 1.0, pch = 16, color = "grey80") +
-  # geom_point(data = external.bf.data.meas, cex = 1.0, pch = 16, color = "red") +
   stat_smooth(method = "lm", alpha = 0.75) +
   geom_point(data = iBite.table.reduced_plot, color = "black", cex = 1, pch = 16) + 
   scale_x_log10() +
   scale_y_log10() +
   labs(y = bquote("bite force [N]"), x = bquote("body length [mm]")) +
-  # geom_text(x = 1, y = 1.0, label = lin.eq.1, parse = TRUE)+
   theme_bw()
 # p1.body.l
+
 p1.body.l.hist <- ggExtra::ggMarginal(p1.body.l, type = "histogram")
-p1.body.l.hist
+# p1.body.l.hist
 
 
 # head width; normal mean <- in supplement
-lin.eq.1 <- lm_eqn(x=log10(iBite.table.reduced_ID$mean.ID.head.w),
-                   y = log10(iBite.table.reduced_ID$mean.bf.ID))
-lin.eq.1
+lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID) ~ log10(iBite.table.reduced_ID$mean.ID.head.w))
+summary(lin.eq.1)
 
 iBite.table.reduced_plot <- iBite.table.reduced_ID %>% # renaming so it fits ggplot but names are not accurate
   select(-c(mean.bf.specimen, head.w)) %>%
@@ -440,21 +438,20 @@ p1 <- ggplot(data = iBite.table.reduced_specimen, aes(x = head.w,
   scale_x_log10() +
   scale_y_log10() +
   labs(y = bquote("bite force [N]"), x = bquote("body length [mm]")) +
-  # geom_text(x = 1, y = 1.0, label = lin.eq.1, parse = TRUE)+
   theme_bw()
-
 # p1
-p1.head.w.hist.regular <- ggExtra::ggMarginal(p1, type = "histogram")
 
+p1.head.w.hist.regular <- ggExtra::ggMarginal(p1, type = "histogram")
+# p1.head.w.hist.regular
 
 # head width; geometric mean <- in Fig. 2 in main text
-lin.eq.1 <- lm_eqn(x=log10(iBite.table.reduced_ID$mean.ID.head.w.geom), 
-                   y = log10(iBite.table.reduced_ID$mean.bf.ID.geom))
-lin.eq.1
+lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID.geom) ~ log10(iBite.table.reduced_ID$mean.ID.head.w.geom))
+summary(lin.eq.1)
 
 iBite.table.reduced_plot <- iBite.table.reduced_ID %>% # renaming so it fits ggplot but names are not accurate
   select(-c(mean.bf.specimen, max.bf.specimen, head.w)) %>% 
   rename(max.bf.specimen = mean.bf.ID.geom, head.w = mean.ID.head.w.geom)
+
 p1.head.w <- ggplot(data = iBite.table.reduced_specimen, aes(x = head.w,
                                                              y = max.bf.specimen)) +
   geom_point(cex = 1, pch = 16, color = "grey80", alpha = 1) +
@@ -464,11 +461,11 @@ p1.head.w <- ggplot(data = iBite.table.reduced_specimen, aes(x = head.w,
   scale_x_log10() +
   scale_y_log10() +
   labs(y = bquote("bite force [N]"), x = bquote("head width [mm]")) +
-  # geom_text(x = 1, y = 1.0, label = lin.eq.1, parse = TRUE)+
   theme_bw()
 # p1.head.w
+
 p1.head.w.hist <- ggExtra::ggMarginal(p1.head.w, type = "histogram")
-p1.head.w.hist
+# p1.head.w.hist
 
 # save regular mean scatter plots for supplement
 pdf(paste0("./4_plots/3_scatter_all_regular.pdf"),
@@ -643,8 +640,6 @@ p1.coverage.families <- ggplot(data = coverage.families,
 # p1.coverage.families
 
 
-
-
 # get Koepper-Geiger climate zones
 # replace coordinate NAs with 0 (these are the animals from breeding cultures)
 iBite.table.reduced_iBite$latitude[is.na(iBite.table.reduced_iBite$latitude)] <- 0
@@ -693,23 +688,6 @@ p1.kgc.coverage <- ggplot(data = iBite.table.kgc.bar, aes(x=kgc, y=n.kgc, fill =
   ylim(c(0,201))
 # p1.kgc.coverage
 
-# here! delete
-iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
-iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$longitude == 0] <- NA
-iBite.table.reduced_iBite$country <- NA
-for(i in 1:nrow(iBite.table.reduced_iBite)){
-  if(!is.na(iBite.table.reduced_iBite$latitude[i])){
-    iBite.table.reduced_iBite$country[i] = maps::map.where(x = iBite.table.reduced_iBite$longitude[i], y = iBite.table.reduced_iBite$latitude[i])
-  }
-}
-unique(iBite.table.reduced_iBite$country)
-iBite.table.reduced_iBite$country[iBite.table.reduced_iBite$latitude==55.687574] <- "Denmark"
-iBite.table.reduced_iBite$country[round(iBite.table.reduced_iBite$latitude)==-16] <- "Australia"
-unique(iBite.table.reduced_iBite$country)
-iBite.table.reduced_iBite$country[is.na(iBite.table.reduced_iBite$country)] <- "breeding"
-unique(iBite.table.reduced_iBite$country)
-# /here! delete
-
 # create country tibble
 iBite.table.reduced_iBite.country.bar <- iBite.table.reduced_iBite %>% 
   group_by(ID) %>% 
@@ -718,7 +696,7 @@ iBite.table.reduced_iBite.country.bar <- iBite.table.reduced_iBite %>%
   dplyr::summarize(n.country = n()) %>% 
   ungroup() %>% 
   arrange(desc(n.country)) %>% 
-  mutate(country=factor(country, levels = iBite.table.reduced_iBite.country.bar$country)) 
+  mutate(country=factor(country, levels = country)) 
 
 # print country-wise coverage
 for(c in iBite.table.reduced_iBite.country.bar$country){
@@ -747,9 +725,9 @@ print(grid.arrange(p1.geographic.coverage, p1.kgc.coverage,
                    nrow = 2))
 dev.off()
 
-# save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
-iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
-iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$longitude == 0] <- NA
-iBite.table.reduced_iBite %>% 
-  arrange_(c("HemiHolo", all.ranks))
-write.xlsx2(iBite.table.reduced_iBite, "./iBite_table.xlsx")
+# # save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
+# iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
+# iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$longitude == 0] <- NA
+# iBite.table.reduced_iBite.save <- iBite.table.reduced_iBite  %>%
+#   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species)
+# xlsx::write.xlsx2(iBite.table.reduced_iBite.save, "./iBite_table.xlsx")
