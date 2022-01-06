@@ -40,8 +40,6 @@ if(length(new.packages) > 0){
 }
 new.packages <- packages.needed[!(packages.needed %in% installed.packages()[,"Package"])]
 if(length(new.packages) > 0){
-  message(paste("!!! The following packages have not been installed:", paste(new.packages, collapse = ", ")), ". !!!")
-  
   if(grepl("forceR", new.packages)){
     devtools::install_github("https://github.com/Peter-T-Ruehr/forceR")
   }
@@ -49,10 +47,16 @@ if(length(new.packages) > 0){
   message(new.packages, " have not been installed...")
 }
 
+# check if all packages were installed
+new.packages <- packages.needed[!(packages.needed %in% installed.packages()[,"Package"])]
+if(length(new.packages) > 0){
+  message(paste("!!! The following packages have not been installed: ", paste(new.packages, collapse = ", ")), ". !!!")
+}
+
 # load all packages
 lapply(packages.needed, require, character.only = TRUE)
 
-# download data from zenodo. Define number of CPU 'cores' to use in parallel to speed up download.
+# download data from zenodo. Define number of CPU cores to use in parallel to speed up download.
 cores <- 1
 
 # # here! uncomment
@@ -724,6 +728,13 @@ print(grid.arrange(p1.geographic.coverage, p1.kgc.coverage,
                    p1.coverage.order, p1.coverage.families, 
                    nrow = 2))
 dev.off()
+
+# print final figure again, this time to the R plot device
+print(grid.arrange(p1.geographic.coverage, p1.kgc.coverage,
+                   p1.coverage.order, p1.coverage.families, 
+                   nrow = 2))
+
+print("All finished!")
 
 # # save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
 # iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
