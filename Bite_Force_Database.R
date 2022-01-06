@@ -5,15 +5,15 @@
 ##
 ## Purpose of script: 
 ##      This script was used to create the tables and figures of the article describing the insect bite force database published under
-##          Rühr et al. (in review): A bite force database of 654 insect species.
+##          R?hr et al. (in review): A bite force database of 654 insect species.
 ##
 ## Author:
-##      Peter T. Rühr
+##      Peter T. R?hr
 ##
 ## Date Created:
-##      2022-01-05
+##      2021-10-17
 ##
-## Copyright (c) Peter T. Rühr, 2022
+## Copyright (c) Peter T. R?hr, 2022
 ## Email: ruehr@uni-bonn.de
 ##
 ## ---------------------------
@@ -115,7 +115,7 @@ length(unique(iBite.table$iBite))
 
 # raw data plotting
 # load all raw measurements
-raw.measurements <- load_mult("./1_raw") # here! 1_raw 1_raw_test
+raw.measurements <- load_mult("./1_raw")
 
 # reduce frequency to 100 Hz for fast plotting - this may take a few minutes
 raw.measurements.200 <- reduce_frq(raw.measurements, 
@@ -138,7 +138,7 @@ for(i in 1:length(measurements)){
   # get current iBite
   curr.measurement = measurements[i]
   
-  # filter out plot data from long dormat table 'raw.measurements.200'
+  # filter out plot data from long format table 'raw.measurements.200'
   curr.plot.data = raw.measurements.200 %>%
     filter(filename == curr.measurement) %>%
     select(t, y, filename) %>% 
@@ -223,7 +223,7 @@ log.path <- "./3_logs"
 log.files <- list.files(log.path, pattern = "csv", full.names = T)
 log.file.iBite.nos <- gsub("iBite_(\\d+)_.+", "\\1", basename(log.files))
 
-# define lever.ratio if forceX system (s. Rühr & Blanke (in review))
+# define lever.ratio if forceX system (s. R?hr & Blanke (in review))
 lever.ratio <- 10.5 / 19.5 
 iBite.table$lever.ratio <- lever.ratio
 
@@ -492,9 +492,9 @@ dev.off()
 
 # does database data share a common slope with external data, or do they show unique slopes?
 # unique allometric slopes: 
-# (shape ∼ log(centroid size) × order) 
+# (shape ??? log(centroid size) ? order) 
 # common allometric slope: 
-# (shape ∼ log(centroid size) + order)
+# (shape ??? log(centroid size) + order)
 external.and.iBite.data <- rbind(iBite.table.reduced_ID %>% 
                                    select(ID, mean.ID.head.w.geom, mean.bf.ID.geom) %>% 
                                    dplyr::rename(mean.head.w.geom = mean.ID.head.w.geom,
@@ -736,9 +736,10 @@ print(grid.arrange(p1.geographic.coverage, p1.kgc.coverage,
 
 print("All finished!")
 
-# # save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
+# # # save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
 # iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
 # iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$longitude == 0] <- NA
 # iBite.table.reduced_iBite.save <- iBite.table.reduced_iBite  %>%
-#   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species)
+#   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species) %>% 
+#   rename(climate.zone = kgc, amplifictaion = amp)
 # xlsx::write.xlsx2(iBite.table.reduced_iBite.save, "./iBite_table.xlsx")
