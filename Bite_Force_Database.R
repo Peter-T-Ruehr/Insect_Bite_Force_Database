@@ -11,7 +11,7 @@
 ##      Peter T. R?hr
 ##
 ## Date Created:
-##      2021-10-17
+##      2022-01-05
 ##
 ## Copyright (c) Peter T. R?hr, 2022
 ## Email: ruehr@uni-bonn.de
@@ -57,28 +57,27 @@ if(length(new.packages) > 0){
 lapply(packages.needed, require, character.only = TRUE)
 
 # download data from zenodo. Define number of CPU cores to use in parallel to speed up download.
+# instead, you can download the data directly from Zenodo: https://www.doi.org/10.5281/zenodo.5782923
 cores <- 1
 
-# # here! uncomment
-# if(cores > 1){
-#   download_zenodo(doi = "10.5281/zenodo.5782923",
-#                   path = "./test",
-#                   parallel = TRUE,
-#                   parallel_handler = parLapply,
-#                   cl = makeCluster(cores))
-# } else if (cores == 1){
-#   download_zenodo(doi = "10.5281/zenodo.5782923",
-#                   path = "./test",
-#   )
-# } else {
-#   message("Number of cores not defined...")
-# }
-# # /here! uncomment
+if(cores > 1){
+  download_zenodo(doi = "10.5281/zenodo.5782923",
+                  path = "./test",
+                  parallel = TRUE,
+                  parallel_handler = parLapply,
+                  cl = makeCluster(cores))
+} else if (cores == 1){
+  download_zenodo(doi = "10.5281/zenodo.5782923",
+                  path = "./test",
+  )
+} else {
+  message("Number of cores not defined...")
+}
 
 # ########################################################################
 # Now manually unpack the Zenodo zip file so that all files are in the 
 # same folder as the R project "Bite_Force_Databank.Rproj".
-# Only then can this script run seamlessly
+# Only then the correct folder structure can be guaranteed and this script runs seamlessly.
 # ########################################################################
 
 # get iBite table (this table already contains the results of this script - we only keep the necessary columns here)
