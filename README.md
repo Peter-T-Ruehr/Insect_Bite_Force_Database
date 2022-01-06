@@ -11,7 +11,7 @@ Rühr et al. (**in review**): A bite force database of 654 insect species.
 
 The script contains comments that explain the code step-by-step.
 
-The Zenodo folder that is automatically downloaded is available at doi.org/10.5281/zenodo.5782923. Note that the Zenodo data must be unzipped so that all files are located in the same folder as the 'Bite_Force_Database.Rproj' file.
+The Zenodo folder that is automatically downloaded by lines 58 ff. is available at doi.org/10.5281/zenodo.5782923. Note that the Zenodo data must be unzipped after download so that all files are located in the same folder as the 'Bite_Force_Database.Rproj' file.
 
 We provided example code for those steps that have been performed once and need manual input from the user. Howeverm such code is commented out, so that the code results in identical tables and figures as published in the article.
 
