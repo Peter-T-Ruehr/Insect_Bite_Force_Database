@@ -15,7 +15,7 @@ The Zenodo folder that is automatically downloaded is available at doi.org/10.52
 
 We provided example code for those steps that have been performed once and need manual input from the user. Howeverm such code is commented out, so that the code results in identical tables and figures as published in the article.
 
-The Zenodo repository already contains all files that are produced by this script (mainly PDFs with plotted figures and the final databse excel sheet (iBite_table.xlsx)). Running this script will overwrite some of those files. However, the file content will be identical.
+The Zenodo repository already contains all files that are produced by this script (mainly PDFs with plotted figures and the final database Excel sheet 'iBite_table.xlsx'). Running this script will overwrite some of those files. However, the file content will be identical.
 
 ## References
 (1) https://www.rstudio.com/
