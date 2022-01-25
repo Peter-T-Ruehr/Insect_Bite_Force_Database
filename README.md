@@ -5,7 +5,7 @@ This repository contains the R code that was used to create the tables and figur
 Rühr et al. (**in review**): A bite force database of 654 insect species.
 
 ## Instructions
-1. Open the R project 'Bite_Force_Database.Rproj'. We have used RStudio (1) to run R (2)
+1. Open the R project 'Bite_Force_Database.Rproj'. We have used RStudio [1] to run R [2]
 2. Open the R script 'Bite_Force_Database.R'
 3. Run the script
 
@@ -20,6 +20,6 @@ We provided example code for those steps that have been performed once and need 
 The Zenodo repository already contains all files that are produced by this script (mainly PDFs with plotted figures and the final database Excel sheet 'iBite_table.xlsx'). Running this script will overwrite some of those files. However, the file content will be identical.
 
 ## References
-(1) https://www.rstudio.com/
+[1] https://www.rstudio.com/
 
-(2) R Core Team. R: A language and environment for statistical computing. R Foundation for Statistical Computing. (R Foundation for Statistical Computing, 2021).
+[2] R Core Team. R: A language and environment for statistical computing. R Foundation for Statistical Computing. (R Foundation for Statistical Computing, 2021).
