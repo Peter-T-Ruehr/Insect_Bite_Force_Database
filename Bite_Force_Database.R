@@ -88,7 +88,7 @@ iBite.table <- read_excel("./iBite_table.xlsx") %>%
          "latitude", "longitude", "country")
 
 # define ranks for taxonomy
-all.ranks <- c("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species") # , "subtribe"
+all.ranks <- c("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species")
 all.ranks.factor <- factor(all.ranks, levels = all.ranks)
 
 # define if orders belong to Hemimetabola or Holometabola ("Hemi" or "Holo")
@@ -184,12 +184,12 @@ dev.off()
 # amp_drift_corr(folder =
 #                  "W:/PAPERS/PTR_Bite force DATA/R/Bite_Force_Databank/data/mantos/1_raw/")
 
-# # exemplary baseline drift correction: automatic mode, this has been run some all files once
+# # exemplary baseline drift correction: automatic mode, this has been run on files if applicable
 # baseline_corr(file = "W:/PAPERS/PTR_Bite force DATA/R/Bite_Force_Databank/data/1_raw/iBite_0242.csv",
 #               corr.type = "auto",
 #               print.to.screen = T)
 # 
-# # exemplary baseline drift correction: manual mode, this has been run some all files once
+# # exemplary baseline drift correction: manual mode, this has been run on files if applicable
 # baseline_corr(file = "./cropped/ampdriftcorr/iBite_0188_ampdriftcorr.csv", 
 #               corr.type = "man",  
 #               print.to.screen = T)
@@ -490,10 +490,6 @@ dev.off()
 
 
 # does database data share a common slope with external data, or do they show unique slopes?
-# unique allometric slopes: 
-# (shape ??? log(centroid size) ? order) 
-# common allometric slope: 
-# (shape ??? log(centroid size) + order)
 external.and.iBite.data <- rbind(iBite.table.reduced_ID %>% 
                                    select(ID, mean.ID.head.w.geom, mean.bf.ID.geom) %>% 
                                    dplyr::rename(mean.head.w.geom = mean.ID.head.w.geom,
@@ -506,9 +502,9 @@ external.and.iBite.data <- rbind(iBite.table.reduced_ID %>%
                                    mutate(source = "external")) %>% 
   mutate(source = as.factor(source))
 
-# linear model with the null hypothesis of unique allometric slopes  
+# linear model with the null hypothesis of unique allometric slopes 
 unique <- lm(log10(external.and.iBite.data$mean.bf.geom) ~ log10(external.and.iBite.data$mean.head.w.geom) * external.and.iBite.data$source)
-# inear model with the null hypothesis of a common allometric slope 
+# inear model with the null hypothesis of a common allometric slope
 common <- lm(log10(external.and.iBite.data$mean.bf.geom) ~ log10(external.and.iBite.data$mean.head.w.geom) + external.and.iBite.data$source)
 
 # compare models
@@ -556,7 +552,7 @@ for(o in 1:nrow(coverage.orders)){
   }
 }
 
-
+# add percentage column
 coverage.orders <- coverage.orders %>%
   mutate(percentage.otl = n*100/species.otl)
 
@@ -605,6 +601,7 @@ for(o in 1:nrow(coverage.families)){
   
 }
 
+# add percentage column
 coverage.families <- coverage.families %>% 
   drop_na(species.otl) %>% 
   mutate(percentage = n*100/species.otl)
