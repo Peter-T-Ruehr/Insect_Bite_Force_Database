@@ -847,4 +847,16 @@ write.table.to.clipboard <- function(df, seperator = "\t"){
   write.table(df, file = "clipboard-16384", sep = seperator, col.names = T, na = "", dec = ".", row.names = F)
 }
 
+# create overview table for Zenodo data description page
+iBite.table.reduced_iBite.save.zenodo <- iBite.table.reduced_iBite.save %>% 
+  select(iBite, specimen, order, family, ID) %>% 
+  group_by(ID) %>% 
+  mutate(iBite_numbers = paste(unique(iBite), collapse = "; ")) %>% 
+  mutate(specimen_numbers = paste(unique(specimen), collapse = "; ")) %>% 
+  ungroup() %>% 
+  select(-c(iBite, specimen)) %>% 
+  distinct()
+
+write_csv(iBite.table.reduced_iBite.save.zenodo, "./iBite_table_zenodo.csv") 
+
 print("All finished!")
