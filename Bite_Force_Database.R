@@ -5,15 +5,15 @@
 ##
 ## Purpose of script: 
 ##      This script was used to create the tables and figures of the article describing the insect bite force database published under
-##          R?hr et al. (in review): A bite force database of 654 insect species.
+##          Rühr et al. (accepted): A bite force database of 654 insect species. Scientific Data.
 ##
 ## Author:
-##      Peter T. R?hr
+##      Peter T. Rühr
 ##
 ## Date Created:
 ##      2022-01-05
 ##
-## Copyright (c) Peter T. R?hr, 2022
+## Copyright (c) Peter T. Rühr, 2022
 ## Email: ruehr@uni-bonn.de
 ##
 ## ---------------------------
@@ -31,26 +31,20 @@
 ## ---------------------------
 
 # define package list that is needed to run this script
-packages.needed <- c("parallel", "zen4R", "rotl", "kgc", "gridExtra", "viridis", "ggplot2", "plotly", "readxl", "tidyverse", "forceR", "gsheet")
+packages.needed <- c("report", "scales", "parallel", "zen4R", "rotl", "kgc", "gridExtra", "viridis", "ggplot2", "plotly", "readxl", "gsheet", "tidyverse", "forceR")
 
 # install missing packages
 new.packages <- packages.needed[!(packages.needed %in% installed.packages()[,"Package"])]
 if(length(new.packages) > 0){
   install.packages(new.packages)
 }
-new.packages <- packages.needed[!(packages.needed %in% installed.packages()[,"Package"])]
-if(length(new.packages) > 0){
-  if(grepl("forceR", new.packages)){
-    devtools::install_github("https://github.com/Peter-T-Ruehr/forceR")
-  }
-} else {
-  message(new.packages, " have not been installed...")
-}
 
 # check if all packages were installed
 new.packages <- packages.needed[!(packages.needed %in% installed.packages()[,"Package"])]
 if(length(new.packages) > 0){
-  message(paste("!!! The following packages have not been installed: ", paste(new.packages, collapse = ", ")), ". !!!")
+  stop(paste("!!! The following packages have not been installed: ", paste(new.packages, collapse = ", ")), ". !!!")
+} else{
+  print("All necessary packages installed.")
 }
 
 # load all packages
@@ -81,14 +75,14 @@ if(cores > 1){
 # ########################################################################
 
 # get iBite table (this table already contains the results of this script - we only keep the necessary columns here)
-iBite.table <- read_excel("./iBite_table.xlsx") %>% 
-  select("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species", 
-         "iBite", "ID", "specimen", "amp", 
-         "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l", 
+iBite.table <- read_csv("./iBite_table.csv", show_col_types = FALSE) %>%
+  select("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species",
+         "iBite", "ID", "specimen", "amplifictaion",
+         "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l",
          "latitude", "longitude", "country")
 
 # define ranks for taxonomy
-all.ranks <- c("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species")
+all.ranks <- c("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species") # , "subtribe"
 all.ranks.factor <- factor(all.ranks, levels = all.ranks)
 
 # define if orders belong to Hemimetabola or Holometabola ("Hemi" or "Holo")
@@ -100,21 +94,22 @@ HemiHolo.order.fit$HemiHolo <- c(rep("Hemimetabola", 8), rep("Holometabola", 5))
 # add HemiHolo to tibble and rearrange columns and rows
 iBite.table <- left_join(iBite.table, HemiHolo.order.fit, by = "order") %>% 
   select("HemiHolo", "infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species", 
-         "iBite", "ID", "specimen", "amp", 
+         "iBite", "ID", "specimen", "amplifictaion", 
          "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l", 
          "latitude", "longitude", "country") %>% 
   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species)
 
 # get order, family, species, specimen and measurement (=iBite) numbers
-length(unique(iBite.table$order[iBite.table$order != "x"]))
-length(unique(iBite.table$family[iBite.table$family != "x"]))
+length(unique(iBite.table$order))
+length(unique(iBite.table$family))
 length(unique(iBite.table$ID))
 length(unique(iBite.table$specimen))
 length(unique(iBite.table$iBite))
 
 # raw data plotting
 # load all raw measurements
-raw.measurements <- load_mult("./1_raw")
+raw.measurements <- load_mult("./1_raw",
+                              show.progress = TRUE)
 
 # reduce frequency to 100 Hz for fast plotting - this may take a few minutes
 raw.measurements.200 <- reduce_frq(raw.measurements, 
@@ -127,12 +122,13 @@ measurements <- unique(raw.measurements.200$filename)
 # define path for plots
 plot.path <- "./4_plots"
 
-# plot all measurements into PDF file at ./4_plots - this will take a few minutes
+# plot all measurements to PDF file - this will take a few minutes
 pdf(file.path(plot.path, "1_raw_measurements.pdf"), 
     onefile = TRUE, 
     paper = "a4", 
     height = 14)
 par(mfrow=c(4,2))
+
 for(i in 1:length(measurements)){
   # get current iBite
   curr.measurement = measurements[i]
@@ -140,8 +136,8 @@ for(i in 1:length(measurements)){
   # filter out plot data from long format table 'raw.measurements.200'
   curr.plot.data = raw.measurements.200 %>%
     filter(filename == curr.measurement) %>%
-    select(t, y, filename) %>% 
-    mutate(t=t/1000) %>% 
+    select(t, y, filename) %>%
+    mutate(t=t/1000) %>%
     rename(Time.s = t, V = y)
   
   # get measurement number
@@ -162,6 +158,10 @@ for(i in 1:length(measurements)){
     filter(iBite == iBite_no) %>%
     pull(ID)
   
+  if(is.na(curr.order) | is.na(curr.family) | is.na(curr.ID)){
+    stop(i)
+  }
+  
   # define plot title
   curr.title <- bquote(.(iBite_no)*":"~italic(.(gsub("_", " ", curr.ID)))~"("*.(curr.order)*":"~.(curr.family)*")")
   
@@ -175,42 +175,86 @@ for(i in 1:length(measurements)){
 dev.off()
 
 
-# # exemplary cropping - do not execute, this has been performed on each file once
-# file.list <- list.files("./1_raw", pattern = "csv", full.names = T)
-# crop_measurement(file = file.list[2000])
+# # exemplary converting - do not execute, this has been performed on each file once
+# file.list <- list.files("./1_raw", pattern = "csv", full.names = TRUE)
+# convert_measurement(file = file.list[1],
+#                  path.data = "./0_converted")
 
+# # exemplary cropping - do not execute, this has been performed on each file once
+# file.list <- list.files("./1_raw", pattern = "csv", full.names = TRUE)
+# crop_measurement(file = file.list[1],
+#                  path.data = "./1_raw")
 
 # # exemplary amp drift correction - do not execute, this has been performed on each file once
-# amp_drift_corr(folder =
-#                  "W:/PAPERS/PTR_Bite force DATA/R/Bite_Force_Databank/data/mantos/1_raw/")
+# file.list <- list.files("./1_raw", pattern = "csv", full.names = TRUE)
+# amp_drift_corr(
+#   filename = file.list[1],
+#   tau = 9400,
+#   res.reduction = 10,
+#   plot.to.screen = FALSE,
+#   write.data = TRUE,
+#   write.PDFs = TRUE,
+#   write.logs = TRUE,
+#   output.folder = "./1_ampdriftcorr",
+#   show.progress = TRUE
+# )
 
-# # exemplary baseline drift correction: automatic mode, this has been run on files if applicable
-# baseline_corr(file = "W:/PAPERS/PTR_Bite force DATA/R/Bite_Force_Databank/data/1_raw/iBite_0242.csv",
-#               corr.type = "auto",
-#               print.to.screen = T)
-# 
-# # exemplary baseline drift correction: manual mode, this has been run on files if applicable
-# baseline_corr(file = "./cropped/ampdriftcorr/iBite_0188_ampdriftcorr.csv", 
-#               corr.type = "man",  
-#               print.to.screen = T)
+
+# # exemplary baseline drift correction: automatic mode, this has been run some all files once
+# file.list <- list.files("./1_ampdriftcorr", pattern = "csv", full.names = TRUE)
+# baseline_corr(
+#   filename = file.list[1],
+#   corr.type = "auto",
+#   window.size.mins = 1000,
+#   window.size.means = NULL,
+#   quantile.size = 0.05,
+#   y.scale = 0.5,
+#   res.reduction = 10,
+#   Hz = 100,
+#   plot.to.screen = TRUE,
+#   write.data = TRUE,
+#   write.PDFs = TRUE,
+#   write.logs = TRUE,
+#   output.folder = "1_baselinecorr",
+#   show.progress = FALSE
+# )
+
+# # exemplary baseline drift correction: manual mode, this has been run on some files once
+# baseline_corr(
+#   filename = file.list[2],
+#   corr.type = "man",
+#   window.size.mins = 1000,
+#   window.size.means = NULL,
+#   quantile.size = 0.05,
+#   y.scale = 0.5,
+#   res.reduction = 10,
+#   Hz = 100,
+#   plot.to.screen = TRUE,
+#   write.data = TRUE,
+#   write.PDFs = TRUE,
+#   write.logs = TRUE,
+#   output.folder = "1_baselinecorr",
+#   show.progress = FALSE
+# )
+
 
 # # sort files after corrections - do not execute, this has been performed once
 # data.folders <- c(getwd(),
-#                   "./cropped",
-#                   "./cropped/ampdriftcorr",
-#                   "./cropped/ampdriftcorr/baselinecorr")
-# results.folder <- "./corrected/"
+#                   "./1_raw",
+#                   "./1_ampdriftcorr",
+#                   "./1_baselinecorr")
 # sort_files(data.folders = data.folders,
-#            results.folder = results.folder,
-#            move = F)
+#            results.folder = "./2_corrected/",
+#            move = FALSE)
 
-
-# plotting corrected data
 # load all corrected raw measurements
-corrected.measurements <- load_mult("./2_corrected")
+corrected.measurements <- load_mult("./2_corrected",
+                                    show.progress = TRUE)
 
 # reduce frequency to 100 Hz for fast plotting - this may take a few minutes
-corrected.measurements.200 <- reduce_frq(corrected.measurements, Hz = 200, measurement.col = "filename")
+corrected.measurements.200 <- reduce_frq(df = corrected.measurements, 
+                                         Hz = 200, 
+                                         measurement.col = "filename")
 
 # get unique measurement names
 measurements <- unique(corrected.measurements.200$filename)
@@ -222,11 +266,10 @@ log.path <- "./3_logs"
 log.files <- list.files(log.path, pattern = "csv", full.names = T)
 log.file.iBite.nos <- gsub("iBite_(\\d+)_.+", "\\1", basename(log.files))
 
-# define lever.ratio if forceX system (s. R?hr & Blanke (in review))
+# define lever.ratio if forceX system (s. Rühr & Blanke (in review))
 lever.ratio <- 10.5 / 19.5 
-iBite.table$lever.ratio <- lever.ratio
 
-# plot all measurements into PDF file - this will also take a few minutes
+# plot all corected measurements to PDF file - this will take a few minutes
 pdf(paste0(plot.path, "/2_measurements_corrected.pdf"), onefile = TRUE, paper = "a4", height = 14)
 par(mfrow=c(4,2))
 for(i in 1:length(measurements)){ # length(measurements)
@@ -268,24 +311,28 @@ for(i in 1:length(measurements)){ # length(measurements)
   # get amplification setting of measurement
   curr.amp <- iBite.table %>% 
     filter(iBite == iBite_no) %>% 
-    pull(amp) %>% 
+    pull(amplifictaion) %>% 
     as.numeric()
   
   # filter measurement data from long format table corrected.measurements.200
   curr.plot.data = corrected.measurements.200 %>%
     filter(filename == curr.measurement) %>%
-    select(t, y, filename) %>% 
+    select(t, y, filename) %>%
     mutate(t=t/1000,
-           N = y*lever.ratio*(1/curr.amp)) %>% 
+           N = y*lever.ratio*(1/curr.amp)) %>%
     rename(Time.msec = t)
   
   # define plot title
   curr.title <- bquote(.(iBite_no)*":"~italic(.(gsub("_", " ", curr.ID)))~"("*.(curr.order)*":"~.(curr.family)*"); corr.:"~.(log.type))
   
+  if(is.na(curr.order) | is.na(curr.family) | is.na(curr.ID)){
+    stop(i)
+  }
+  
   # plot data
   plot(curr.plot.data$Time.msec, curr.plot.data$N, type="l",
        main = curr.title, cex.main = .6, xlab = "Time [s]", ylab = "Force [N]")
-  
+
   # add 0-force line
   lines(range(curr.plot.data$Time.msec), y=c(0,0), col = "red", lty = 2)
   
@@ -295,26 +342,36 @@ for(i in 1:length(measurements)){ # length(measurements)
 }
 dev.off()
 
-
 # add iBite column to tibble
 corrected.measurements.200$iBite = gsub("iBite_", "", corrected.measurements.200$filename)
 corrected.measurements.200$iBite = gsub("_ampdriftcorr", "", corrected.measurements.200$iBite)
 corrected.measurements.200$iBite = gsub("_baselinecorr", "", corrected.measurements.200$iBite)
 
+
+# add lever ratio to iBite.table
+iBite.table$lever.ratio <- lever.ratio
+
+# rename amplifcation column to amp for y_to_force() function
+iBite.table <- iBite.table %>% 
+  rename(amp = amplifictaion)
+
 # convert voltage to force and save in new tibble
-iBite.measurements.long <- y_to_force(corrected.measurements.200, 
-                                      iBite.table, 
+iBite.measurements.long <- y_to_force(df = corrected.measurements.200, 
+                                      classifier = iBite.table, 
                                       measurement.col = "iBite")
 
+# re-rename amp column to amplifcation
+iBite.table <- iBite.table %>% 
+  rename(amplifictaion = amp)
 
 # change negative Force values to positive values for log transformations
 iBite.measurements.long$force[iBite.measurements.long$force <= 0] <- 0.00000001
 
-# remove unnessesary columns and get iBite.table info
+# remove unnecessary columns and get iBite.table info
 iBite.measurements.long <- iBite.measurements.long %>% 
-  select(-filename) %>% 
+  select(-c(species, specimen)) %>% 
   left_join(select(iBite.table, 
-                   ID, specimen, iBite, 
+                   ID, genus, species, specimen, iBite, 
                    head.w, head.h, head.l,
                    th.w, wing.l, body.l),
             by = "iBite")
@@ -324,8 +381,9 @@ mean_geometric_10 <- function(x){
   10^(mean(log10(x)))
 }
 
-# find and calculate max and mean bite forces per measuremnt (=iBite), specimen and species (=ID)
+# find and calculate max and mean bite forces per measurement (=iBite), specimen and species (=ID)
 iBite.table.reduced_iBite <- iBite.measurements.long  %>%
+  select(-c(genus, species)) %>% 
   # find max bite force of each iBite (= measurement)
   ungroup() %>% 
   group_by(iBite) %>% 
@@ -355,11 +413,16 @@ iBite.table.reduced_iBite <- iBite.measurements.long  %>%
          mean.ID.head.l.geom = mean_geometric_10(head.l),
          mean.ID.th.w.geom = mean_geometric_10(th.w),
          mean.ID.wing.l.geom = mean_geometric_10(wing.l),
-         mean.ID.body.l.geom = mean_geometric_10(body.l)) %>% 
+         mean.ID.body.l.geom = mean_geometric_10(body.l),
+         head.vol = (4/3)*(pi*head.w*head.h*head.l),
+         mean.ID.head.vol.geom = mean_geometric_10(head.vol)) %>% 
   ungroup() %>% 
-  select(-c(t,y,force)) %>% 
-  left_join(select(iBite.table, c("iBite", HemiHolo, all.ranks, amp, latitude, longitude, country)),
+  select(-c(t,force)) %>% 
+  left_join(select(iBite.table, c("iBite", HemiHolo, all_of(all.ranks), amplifictaion, latitude, longitude, country)),
             by = "iBite")
+
+iBite.table.reduced_iBite$HemiHolo[iBite.table.reduced_iBite$order == "Isoptera"] <- "Hemimetabola"
+
 
 # reduce tibble to one observation per specimen
 iBite.table.reduced_specimen <- iBite.table.reduced_iBite %>%  
@@ -375,12 +438,16 @@ iBite.table.reduced_ID <- iBite.table.reduced_specimen %>%
 
 # get external data without predicted values
 external.bf.data.meas <- read_xlsx("./ext_data/external_data.xlsx") %>%
-  filter(predicted == "no") %>% 
+  filter(predicted == "no",
+         !is.na(head_width),
+         !is.na(bite_force)) %>% 
   mutate(ID = paste0(genus, "_", species)) %>% 
   rename(head.w = head_width,
          max.bf.specimen = bite_force)
 
 # scatter plots with regressions: the plots that are commented out are not used in the paper
+
+
 
 # body length; normal mean <- in supplement
 lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID) ~ log10(iBite.table.reduced_ID$mean.ID.body.l))
@@ -394,13 +461,17 @@ p1 <- ggplot(data = iBite.table.reduced_specimen, aes(x = body.l,
   geom_point(cex = 1.0, pch = 16, color = "grey80") +
   stat_smooth(method = "lm", alpha = 0.75) +
   geom_point(data = iBite.table.reduced_plot, cex = 1, pch = 16) +
-  scale_x_log10() +
-  scale_y_log10() +
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
   labs(y = bquote("bite force [N]"), x = bquote("body length [mm]")) +
-  theme_bw()
+  theme_bw() 
+
 # p1
 p1.body.l.hist.regular <- ggExtra::ggMarginal(p1, type = "histogram")
 # p1.body.l.hist.regular
+
 
 # body length; geometric mean <- in Fig. 2 in main text
 lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID.geom) ~ log10(iBite.table.reduced_ID$mean.ID.body.l.geom))
@@ -414,15 +485,19 @@ p1.body.l <- ggplot(data = iBite.table.reduced_specimen, aes(x = body.l,
                                                              y = max.bf.specimen)) +
   geom_point(cex = 1.0, pch = 16, color = "grey80") +
   stat_smooth(method = "lm", alpha = 0.75) +
-  geom_point(data = iBite.table.reduced_plot, color = "black", cex = 1, pch = 16) + 
-  scale_x_log10() +
-  scale_y_log10() +
+  geom_point(data = iBite.table.reduced_plot, color = "black", cex = 1, pch = 16) +
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
   labs(y = bquote("bite force [N]"), x = bquote("body length [mm]")) +
   theme_bw()
 # p1.body.l
 
 p1.body.l.hist <- ggExtra::ggMarginal(p1.body.l, type = "histogram")
 # p1.body.l.hist
+
+
 
 
 # head width; normal mean <- in supplement
@@ -437,15 +512,19 @@ p1 <- ggplot(data = iBite.table.reduced_specimen, aes(x = head.w,
                                                       y = mean.bf.specimen)) +
   geom_point(cex = 1.0, pch = 16, color = "grey80") +
   stat_smooth(method = "lm", alpha = 0.75) +
-  geom_point(data = iBite.table.reduced_plot, cex = 1, pch = 16) +
-  scale_x_log10() +
-  scale_y_log10() +
-  labs(y = bquote("bite force [N]"), x = bquote("body length [mm]")) +
+  geom_point(data = iBite.table.reduced_plot, cex = 1, pch = 16)  +
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  labs(y = bquote("bite force [N]"), x = bquote("head width [mm]")) +
   theme_bw()
 # p1
 
 p1.head.w.hist.regular <- ggExtra::ggMarginal(p1, type = "histogram")
 # p1.head.w.hist.regular
+
+
 
 # head width; geometric mean <- in Fig. 2 in main text
 lin.eq.1 <- lm(log10(iBite.table.reduced_ID$mean.bf.ID.geom) ~ log10(iBite.table.reduced_ID$mean.ID.head.w.geom))
@@ -461,11 +540,14 @@ p1.head.w <- ggplot(data = iBite.table.reduced_specimen, aes(x = head.w,
   stat_smooth(method = "lm", alpha = 0.75) +
   geom_point(data = iBite.table.reduced_plot, color = "black", cex = 1, pch = 16) + # viridis(n=1, begin=0.2)
   geom_point(data = external.bf.data.meas, color = "orange", cex = 2, pch = 18) + # viridis(n=1, begin=0.2)
-  scale_x_log10() +
-  scale_y_log10() +
+  scale_x_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
+  scale_y_log10(breaks = trans_breaks("log10", function(x) 10^x),
+                labels = trans_format("log10", math_format(10^.x))) +
   labs(y = bquote("bite force [N]"), x = bquote("head width [mm]")) +
   theme_bw()
 # p1.head.w
+
 
 p1.head.w.hist <- ggExtra::ggMarginal(p1.head.w, type = "histogram")
 # p1.head.w.hist
@@ -479,6 +561,21 @@ print(grid.arrange(p1.body.l.hist.regular, p1.head.w.hist.regular,
                    nrow = 2))
 dev.off()
 
+# save regular mean scatter plots for supplement (as PDF and SVG)
+svg(paste0("./4_plots/3_scatter_all_regular.svg"),
+    width = 3.5*2,
+    height = 4*1.5)
+
+print(grid.arrange(p1.body.l.hist.regular, p1.head.w.hist.regular, 
+                   nrow = 2))
+dev.off()
+
+grid.arrange(p1.body.l.hist.regular, p1.head.w.hist.regular, 
+             nrow = 2)
+dev.print(svg, file = paste0("//blanke-nas-1/DATA/PAPERS/PTR_Bite force DATA/MS/Figs/_supplement/", 
+                             today(), "_regression_body_length.svg"), width = 8, height = 7)
+
+
 # save geometric mean scatter plots for main text Fig.2
 pdf(paste0("./4_plots/4_scatter_all_geom.pdf"),
     width = 3.5*2,
@@ -490,6 +587,10 @@ dev.off()
 
 
 # does database data share a common slope with external data, or do they show unique slopes?
+# unique allometric slopes: 
+# (shape ??? log(centroid size) ? order) 
+# common allometric slope: 
+# (shape ??? log(centroid size) + order)
 external.and.iBite.data <- rbind(iBite.table.reduced_ID %>% 
                                    select(ID, mean.ID.head.w.geom, mean.bf.ID.geom) %>% 
                                    dplyr::rename(mean.head.w.geom = mean.ID.head.w.geom,
@@ -502,9 +603,9 @@ external.and.iBite.data <- rbind(iBite.table.reduced_ID %>%
                                    mutate(source = "external")) %>% 
   mutate(source = as.factor(source))
 
-# linear model with the null hypothesis of unique allometric slopes 
+# linear model with the null hypothesis of unique allometric slopes  
 unique <- lm(log10(external.and.iBite.data$mean.bf.geom) ~ log10(external.and.iBite.data$mean.head.w.geom) * external.and.iBite.data$source)
-# inear model with the null hypothesis of a common allometric slope
+# inear model with the null hypothesis of a common allometric slope 
 common <- lm(log10(external.and.iBite.data$mean.bf.geom) ~ log10(external.and.iBite.data$mean.head.w.geom) + external.and.iBite.data$source)
 
 # compare models
@@ -552,7 +653,7 @@ for(o in 1:nrow(coverage.orders)){
   }
 }
 
-# add percentage column
+
 coverage.orders <- coverage.orders %>%
   mutate(percentage.otl = n*100/species.otl)
 
@@ -601,7 +702,6 @@ for(o in 1:nrow(coverage.families)){
   
 }
 
-# add percentage column
 coverage.families <- coverage.families %>% 
   drop_na(species.otl) %>% 
   mutate(percentage = n*100/species.otl)
@@ -645,48 +745,48 @@ p1.coverage.families <- ggplot(data = coverage.families,
 iBite.table.reduced_iBite$latitude[is.na(iBite.table.reduced_iBite$latitude)] <- 0
 iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$latitude == 0] <- 0
 iBite.table.reduced_iBite <- iBite.table.reduced_iBite %>% 
-  mutate(kgc = LookupCZ(data = iBite.table.reduced_iBite %>% 
-                          mutate(cz.ID = 1:nrow(iBite.table.reduced_iBite),
-                                 rndCoord.lon = RoundCoordinates(iBite.table.reduced_iBite$longitude),
-                                 rndCoord.lat = RoundCoordinates(iBite.table.reduced_iBite$latitude)) %>% 
-                          select(cz.ID, rndCoord.lat, rndCoord.lon),
-                        res = "coarse", rc = FALSE)) 
+  mutate(climate.zone = LookupCZ(data = iBite.table.reduced_iBite %>% 
+                                   mutate(cz.ID = 1:nrow(iBite.table.reduced_iBite),
+                                          rndCoord.lon = RoundCoordinates(iBite.table.reduced_iBite$longitude),
+                                          rndCoord.lat = RoundCoordinates(iBite.table.reduced_iBite$latitude)) %>% 
+                                   select(cz.ID, rndCoord.lat, rndCoord.lon),
+                                 res = "coarse", rc = FALSE)) 
 
 # replace "Climate Zone info missing" with NA. These are the animals acquired from breeding cultures
 iBite.table.reduced_iBite <- iBite.table.reduced_iBite %>% 
-  mutate(kgc=gsub("Climate Zone info missing", NA, kgc))
+  mutate(climate.zone=gsub("Climate Zone info missing", NA, climate.zone))
 
-iBite.table.kgc.bar <- iBite.table.reduced_iBite %>% 
-  drop_na(kgc) %>% 
+iBite.table.climate.zone.bar <- iBite.table.reduced_iBite %>% 
+  drop_na(climate.zone) %>% 
   group_by(ID) %>% 
   slice(1) %>% 
-  group_by(kgc) %>% 
-  dplyr::summarize(n.kgc = n()) %>% 
+  group_by(climate.zone) %>% 
+  dplyr::summarize(n.climate.zone = n()) %>% 
   ungroup() %>% 
-  mutate(kgc=factor(kgc, levels = c("Am", "Aw", "As",
-                                    "BSh",
-                                    "Csa", "Csb", "Cfa", "Cfb", "Cwa",
-                                    "Dwb"))) %>% 
-  mutate(kgcI = factor(substring(kgc, 1, 1)))
+  mutate(climate.zone=factor(climate.zone, levels = c("Am", "Aw", "As",
+                                                      "BSh",
+                                                      "Csa", "Csb", "Cfa", "Cfb", "Cwa",
+                                                      "Dwb"))) %>% 
+  mutate(kgcI = factor(substring(climate.zone, 1, 1)))
 
-# print climate coverage
-for(c in unique(iBite.table.kgc.bar$kgcI)){
-  print(paste0(c, ": ", round(iBite.table.kgc.bar %>% 
+# print climate coverage for reporting
+for(c in unique(iBite.table.climate.zone.bar$kgcI)){
+  print(paste0(c, ": ", round(iBite.table.climate.zone.bar %>% 
                                 filter(kgcI == c) %>% 
-                                summarize(sum = sum(n.kgc)) %>% 
+                                summarize(sum = sum(n.climate.zone)) %>% 
                                 pull(sum) * 100 /
-                                sum(iBite.table.kgc.bar$n.kgc), 1), "%."))
+                                sum(iBite.table.climate.zone.bar$n.climate.zone), 1), "%."))
   
 }
 
 # plot climate coverage
-p1.kgc.coverage <- ggplot(data = iBite.table.kgc.bar, aes(x=kgc, y=n.kgc, fill = as.numeric(kgcI))) +
+p1.climate.zone.coverage <- ggplot(data = iBite.table.climate.zone.bar, aes(x=climate.zone, y=n.climate.zone, fill = as.numeric(kgcI))) +
   geom_bar(stat="identity") +
   scale_fill_viridis_c(end = 1) +
   theme_bw() +
   theme(legend.position = "none") + 
   ylim(c(0,201))
-# p1.kgc.coverage
+# p1.climate.zone.coverage
 
 # create country tibble
 iBite.table.reduced_iBite.country.bar <- iBite.table.reduced_iBite %>% 
@@ -698,7 +798,7 @@ iBite.table.reduced_iBite.country.bar <- iBite.table.reduced_iBite %>%
   arrange(desc(n.country)) %>% 
   mutate(country=factor(country, levels = country)) 
 
-# print country-wise coverage
+# print country-wise coverage for reporting
 for(c in iBite.table.reduced_iBite.country.bar$country){
   print(paste0(c, ": ", round(iBite.table.reduced_iBite.country.bar %>% 
                                 filter(country == c) %>% 
@@ -720,22 +820,31 @@ pdf(paste0("./4_plots/5_coverage.pdf"),
     width = 7.518465,
     height = 5.75534
 )
-print(grid.arrange(p1.geographic.coverage, p1.kgc.coverage,
+print(grid.arrange(p1.geographic.coverage, p1.climate.zone.coverage,
                    p1.coverage.order, p1.coverage.families, 
                    nrow = 2))
 dev.off()
 
 # print final figure again, this time to the R plot device
-print(grid.arrange(p1.geographic.coverage, p1.kgc.coverage,
+print(grid.arrange(p1.geographic.coverage, p1.climate.zone.coverage,
                    p1.coverage.order, p1.coverage.families, 
                    nrow = 2))
 
-print("All finished!")
 
-# # # save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
-# iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
-# iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$longitude == 0] <- NA
-# iBite.table.reduced_iBite.save <- iBite.table.reduced_iBite  %>%
-#   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species) %>% 
-#   rename(climate.zone = kgc, amplifictaion = amp)
-# xlsx::write.xlsx2(iBite.table.reduced_iBite.save, "./iBite_table.xlsx")
+# # save final iBite tibble as excel file - do not execute, this has been saved once and is loaded in beginning of this script
+iBite.table.reduced_iBite$latitude[iBite.table.reduced_iBite$latitude == 0] <- NA
+iBite.table.reduced_iBite$longitude[iBite.table.reduced_iBite$longitude == 0] <- NA
+iBite.table.reduced_iBite.save <- iBite.table.reduced_iBite  %>%
+  arrange(HemiHolo, infraclass, cohort, order, suborder, 
+          superfamily, family, subfamily, tribe, genus, species)
+
+
+# save table for Zenodo
+write_csv(iBite.table.reduced_iBite.save, "./iBite_table.csv")
+
+# write table to clipboard copy table to clipboard with extended clipboard size
+write.table.to.clipboard <- function(df, seperator = "\t"){
+  write.table(df, file = "clipboard-16384", sep = seperator, col.names = T, na = "", dec = ".", row.names = F)
+}
+
+print("All finished!")
