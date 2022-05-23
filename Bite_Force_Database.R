@@ -360,6 +360,13 @@ iBite.measurements.long <- y_to_force(df = corrected.measurements.200,
                                       classifier = iBite.table, 
                                       measurement.col = "iBite")
 
+# save iBite measurements with force values for Zenodo
+#   only store the columns iBite, specimen, ID, t, force
+write_csv(iBite.measurements.long %>% 
+            select(iBite, specimen, ID, t, force),
+          "./iBite_force_measurements_combined.csv")
+
+
 # re-rename amp column to amplifcation
 iBite.table <- iBite.table %>% 
   rename(amplifictaion = amp)
