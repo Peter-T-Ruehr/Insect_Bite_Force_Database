@@ -77,7 +77,7 @@ if(cores > 1){
 # get iBite table (this table already contains the results of this script - we only keep the necessary columns here)
 iBite.table <- read_csv("./iBite_table.csv", show_col_types = FALSE) %>%
   select("infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species",
-         "iBite", "ID", "specimen", "amplifictaion",
+         "iBite", "ID", "specimen", "amplification",
          "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l",
          "latitude", "longitude", "country")
 
@@ -94,14 +94,14 @@ HemiHolo.order.fit$HemiHolo <- c(rep("Hemimetabola", 8), rep("Holometabola", 5))
 # add HemiHolo to tibble and rearrange columns and rows
 iBite.table <- left_join(iBite.table, HemiHolo.order.fit, by = "order") %>% 
   select("HemiHolo", "infraclass", "cohort", "order", "suborder", "superfamily", "family", "subfamily", "tribe", "genus", "species", 
-         "iBite", "ID", "specimen", "amplifictaion", 
+         "iBite", "ID", "specimen", "amplification", 
          "head.w", "head.h", "head.l", "th.w", "body.l", "wing.l", 
          "latitude", "longitude", "country") %>% 
   arrange(HemiHolo, infraclass, cohort, order, suborder, superfamily, family, subfamily, tribe, genus, species)
 
 # get order, family, species, specimen and measurement (=iBite) numbers
 length(unique(iBite.table$order))
-length(unique(iBite.table$family))
+length(unique(iBite.table$family)) # (-1 because one family is unknown)
 length(unique(iBite.table$ID))
 length(unique(iBite.table$specimen))
 length(unique(iBite.table$iBite))
@@ -311,7 +311,7 @@ for(i in 1:length(measurements)){ # length(measurements)
   # get amplification setting of measurement
   curr.amp <- iBite.table %>% 
     filter(iBite == iBite_no) %>% 
-    pull(amplifictaion) %>% 
+    pull(amplification) %>% 
     as.numeric()
   
   # filter measurement data from long format table corrected.measurements.200
@@ -332,7 +332,7 @@ for(i in 1:length(measurements)){ # length(measurements)
   # plot data
   plot(curr.plot.data$Time.msec, curr.plot.data$N, type="l",
        main = curr.title, cex.main = .6, xlab = "Time [s]", ylab = "Force [N]")
-
+  
   # add 0-force line
   lines(range(curr.plot.data$Time.msec), y=c(0,0), col = "red", lty = 2)
   
@@ -353,12 +353,26 @@ iBite.table$lever.ratio <- lever.ratio
 
 # rename amplifcation column to amp for y_to_force() function
 iBite.table <- iBite.table %>% 
-  rename(amp = amplifictaion)
+  rename(amp = amplification)
 
 # convert voltage to force and save in new tibble
 iBite.measurements.long <- y_to_force(df = corrected.measurements.200, 
                                       classifier = iBite.table, 
                                       measurement.col = "iBite")
+
+
+# re-rename amp column to amplifcation
+iBite.table <- iBite.table %>% 
+  rename(amplification = amp)
+
+# remove unnecessary columns and get iBite.table info
+iBite.measurements.long <- iBite.measurements.long %>% 
+  select(-c(specimen)) %>% 
+  left_join(select(iBite.table, 
+                   ID, genus, species, specimen, iBite, 
+                   head.w, head.h, head.l,
+                   th.w, wing.l, body.l),
+            by = "iBite")
 
 # save iBite measurements with force values for Zenodo
 #   only store the columns iBite, specimen, ID, t, force
@@ -366,22 +380,8 @@ write_csv(iBite.measurements.long %>%
             select(iBite, specimen, ID, t, force),
           "./iBite_force_measurements_combined.csv")
 
-
-# re-rename amp column to amplifcation
-iBite.table <- iBite.table %>% 
-  rename(amplifictaion = amp)
-
 # change negative Force values to positive values for log transformations
 iBite.measurements.long$force[iBite.measurements.long$force <= 0] <- 0.00000001
-
-# remove unnecessary columns and get iBite.table info
-iBite.measurements.long <- iBite.measurements.long %>% 
-  select(-c(species, specimen)) %>% 
-  left_join(select(iBite.table, 
-                   ID, genus, species, specimen, iBite, 
-                   head.w, head.h, head.l,
-                   th.w, wing.l, body.l),
-            by = "iBite")
 
 # function to calculate geometric mean log10
 mean_geometric_10 <- function(x){
@@ -420,12 +420,10 @@ iBite.table.reduced_iBite <- iBite.measurements.long  %>%
          mean.ID.head.l.geom = mean_geometric_10(head.l),
          mean.ID.th.w.geom = mean_geometric_10(th.w),
          mean.ID.wing.l.geom = mean_geometric_10(wing.l),
-         mean.ID.body.l.geom = mean_geometric_10(body.l),
-         head.vol = (4/3)*(pi*head.w*head.h*head.l),
-         mean.ID.head.vol.geom = mean_geometric_10(head.vol)) %>% 
+         mean.ID.body.l.geom = mean_geometric_10(body.l)) %>%
   ungroup() %>% 
   select(-c(t,force)) %>% 
-  left_join(select(iBite.table, c("iBite", HemiHolo, all_of(all.ranks), amplifictaion, latitude, longitude, country)),
+  left_join(select(iBite.table, c("iBite", HemiHolo, all_of(all.ranks), amplification, latitude, longitude, country)),
             by = "iBite")
 
 iBite.table.reduced_iBite$HemiHolo[iBite.table.reduced_iBite$order == "Isoptera"] <- "Hemimetabola"
@@ -853,6 +851,7 @@ write_csv(iBite.table.reduced_iBite.save, "./iBite_table.csv")
 write.table.to.clipboard <- function(df, seperator = "\t"){
   write.table(df, file = "clipboard-16384", sep = seperator, col.names = T, na = "", dec = ".", row.names = F)
 }
+write.table.to.clipboard(iBite.table.reduced_iBite.save)
 
 # create overview table for Zenodo data description page
 iBite.table.reduced_iBite.save.zenodo <- iBite.table.reduced_iBite.save %>% 
@@ -864,6 +863,6 @@ iBite.table.reduced_iBite.save.zenodo <- iBite.table.reduced_iBite.save %>%
   select(-c(iBite, specimen)) %>% 
   distinct()
 
-write_csv(iBite.table.reduced_iBite.save.zenodo, "./iBite_table_zenodo.csv") 
+write_csv(iBite.table.reduced_iBite.save.zenodo, "./iBite_table_for_zenodo.csv") 
 
 print("All finished!")
